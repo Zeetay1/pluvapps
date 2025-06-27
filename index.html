@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Positivity Summit Check-In</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    #reader { width: 300px; margin: 0 auto; }
+    #result { margin-top: 20px; font-size: 1.2em; font-weight: bold; }
+    .success { color: green; }
+    .error { color: red; }
+    #log { margin-top: 40px; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h2>🎚️ Positivity Summit Check-In</h2>
+  <div id="reader"></div>
+  <div id="result">Scan a QR code to check in</div>
+  <div id="log">
+    <h3>Check-in Log</h3>
+    <table>
+      <thead><tr><th>Name</th><th>Status</th><th>Time</th></tr></thead>
+      <tbody id="log-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const attendees = [
+      {"name": "Zite Onwuekweikpe", "status": "", "time": ""},
+      {"name": "Adanna A.", "status": "", "time": ""},
+      {"name": "Samuel E.", "status": "", "time": ""},
+      {"name": "Ngozi U.", "status": "", "time": ""},
+      {"name": "Ski Name", "status": "", "time": ""}
+    ];
+
+    function updateLog() {
+      const tbody = document.getElementById("log-body");
+      tbody.innerHTML = attendees.map(a => `
+        <tr>
+          <td>${a.name}</td>
+          <td>${a.status}</td>
+          <td>${a.time}</td>
+        </tr>
+      `).join("");
+    }
+
+    function checkIn(name) {
+      const match = attendees.find(a => a.name.trim().toLowerCase() === name.trim().toLowerCase());
+      const resultDiv = document.getElementById("result");
+
+      if (!match) {
+        resultDiv.textContent = `❌ Name not found: ${name}`;
+        resultDiv.className = "error";
+        return;
+      }
+
+      if (match.status === "✅ Checked in") {
+        resultDiv.textContent = `${name} already checked in.`;
+        resultDiv.className = "error";
+        return;
+      }
+
+      const now = new Date();
+      match.status = "✅ Checked in";
+      match.time = now.toLocaleString();
+      updateLog();
+
+      resultDiv.textContent = `✅ ${name} checked in at ${match.time}`;
+      resultDiv.className = "success";
+    }
+
+    const html5QrCode = new Html5Qrcode("reader");
+    const config = { fps: 10, qrbox: 250 };
+
+    function startScanner() {
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          html5QrCode.stop().then(() => {
+            checkIn(decodedText);
+            setTimeout(startScanner, 3000);
+          });
+        },
+        (errorMessage) => { /* ignore errors */ }
+      ).catch(err => {
+        document.getElementById("result").textContent = "Camera error: " + err;
+      });
+    }
+
+    updateLog();
+    startScanner();
+  </script>
+</body>
+</html>
