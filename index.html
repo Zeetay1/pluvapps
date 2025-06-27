@@ -48,29 +48,33 @@
       `).join("");
     }
 
-    function checkIn(name) {
-      const match = attendees.find(a => a.name.trim().toLowerCase() === name.trim().toLowerCase());
-      const resultDiv = document.getElementById("result");
+    function processScannedName(name) {
+      const payload = new URLSearchParams();
+      payload.append("name", name);
 
-      if (!match) {
-        resultDiv.textContent = `❌ Name not found: ${name}`;
-        resultDiv.className = "error";
-        return;
-      }
+      fetch("https://script.google.com/macros/s/AKfycbz0aosv6ZxCAaVxYV6O5vucKVn1ugg5xu8w8nJcA3WKkCM4lxryozTRW01ht0gaHD82/exec", {  // 👈 Replace this
+        method: "POST",
+        body: payload
+      })
+      .then(res => res.json())
+      .then(data => {
+        const resultDiv = document.getElementById("result");
+        resultDiv.textContent = data.message;
+        resultDiv.className = data.success ? "success" : "error";
 
-      if (match.status === "✅ Checked in") {
-        resultDiv.textContent = `${name} already checked in.`;
-        resultDiv.className = "error";
-        return;
-      }
-
-      const now = new Date();
-      match.status = "✅ Checked in";
-      match.time = now.toLocaleString();
-      updateLog();
-
-      resultDiv.textContent = `✅ ${name} checked in at ${match.time}`;
-      resultDiv.className = "success";
+        if (data.success) {
+          const attendee = attendees.find(a => a.name.trim().toLowerCase() === name.trim().toLowerCase());
+          if (attendee) {
+            attendee.status = "✅ Checked in";
+            attendee.time = new Date().toLocaleString();
+            updateLog();
+          }
+        }
+      })
+      .catch(err => {
+        document.getElementById("result").textContent = "⚠️ Error: " + err;
+        document.getElementById("result").className = "error";
+      });
     }
 
     const html5QrCode = new Html5Qrcode("reader");
@@ -82,11 +86,11 @@
         config,
         (decodedText) => {
           html5QrCode.stop().then(() => {
-            checkIn(decodedText);
+            processScannedName(decodedText);
             setTimeout(startScanner, 3000);
           });
         },
-        (errorMessage) => { /* ignore errors */ }
+        (errorMessage) => { /* ignore scan errors */ }
       ).catch(err => {
         document.getElementById("result").textContent = "Camera error: " + err;
       });
